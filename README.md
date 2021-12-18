@@ -166,3 +166,62 @@ exchange.secret = process.env.SECRET_KEY
 }
 
 ####
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require('cors')
+const bodyParser = require('body-parser')
+
+mongoose.connect(
+  process.env.MONGODB_URL || "mongodb://localhost/trading",
+  {
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useUnifiedTopology: true,
+
+  }
+).then(item => {
+  console.log('conectado com o banco')
+}).catch((err)=>{
+  console.log(err)
+});
+
+/////////////////Function///////////////////
+const ccxt = require("ccxt");
+const tulind = require("tulind");
+
+require("./models/Candles");
+const candlesTick = mongoose.model("candles");
+require('./utils/trading');
+
+//////////////////////////////////////////////
+
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}))
+
+const candlesRoute = require("./routes/candles");
+const home = require("./routes/home");
+
+const trading = require("./utils/trading");
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", 'GET,PUT,POST,DELETE');
+
+  app.use(cors());
+  next();
+
+})
+
+setInterval(trading, 60000)
+
+
+
+app.use("/", home);
+app.use("/candles", candlesRoute);
+
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log("Servidor Conectado");
+});
